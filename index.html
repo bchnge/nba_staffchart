@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html>
     <head>
         <meta charset="UTF-8">
         <title>nba-staffchart</title>
@@ -13,6 +13,7 @@
         <h1>Washington Wizards @ Indiana Pacers</h1>
         <h2>February 23 </h2>
         <script>
+            // Initial layout specs
             var xPadding = 300,
                 yPadding = 12,
                 paneWidth = 3,
@@ -22,7 +23,7 @@
                 momentum = [0,0],
                 defaultOpacity = 0.4;
 
-
+            // Load play-by-play and player data
             var nextEvent, prevEvent, dataset, player_keys;
 
             d3.queue(2)
@@ -30,7 +31,7 @@
                 .defer(d3.json, 'data/pbp_players.json')
                 .awaitAll(ready);
 
-
+            // Initialize chart once data is ready
             function ready(error, results) {
                 dataset = results[0];
                 player_keys = results[1];
@@ -38,20 +39,15 @@
                 playerSeriesHeight = 100 + player_keys.length * (yPadding+ 1 * r) ;
                 eventSeriesWidth = xPadding + paneWidth * dataset.length * r * 1.5;
 
-
                 // Initialize chart components
-
-                
-
                 d3.select('body')
                     .append('div')
                     .attr('id', 'labelContainer')
                     .append('svg')
                     .attr('id', 'labelSVG')
                     .attr('height', playerSeriesHeight);
-
-
                 
+                // Draw container           
                 d3.select('body').append('div')
                     .attr('id', 'svgContainer')
                     .append('svg')
@@ -60,10 +56,7 @@
                     width: eventSeriesWidth - 150,
                     id: 'dataSVG'});
 
-
-
-
-                // DRAW GRAPH           
+                // Draw event points
                 for (var j = 0; j< dataset.length; j++) {
                     var g = d3.select('#dataSVG')      
                     .append('g')
@@ -75,7 +68,6 @@
                     .on('click', function(){
                         eventView(this);
                     });
-
 
                     g.selectAll('circle')
                         .data(dataset[j].summary)
@@ -108,7 +100,6 @@
 
 
                 // DRAW PLAYER LABELS
-
                 var h = d3.select('#labelSVG')
                 .append('g')
                 .attr('class', 'label_group')
@@ -125,12 +116,8 @@
                     'y' : function(d, i){ return 103 + d['player_id'] * (yPadding + 1 * r);},
                     'x' : 10})
                     .text(function(d, i){return d['player_name'];});
-
                 fullView(0);
-
-
             };
-
 
             function updateText(event_idx){
                 d3.select('#eventDescription')
@@ -138,7 +125,6 @@
                     .duration(scrollSpeed)
                     .text(dataset[event_idx]['description']);
             };
-
 
             function getNextValidSibling(event){
                 if (event.nextSibling == null){
@@ -154,7 +140,6 @@
                     }
                 }
             }
-
 
             function getPreviousValidSibling(event){
                 console.log(event);
@@ -172,14 +157,20 @@
                 }
             }
 
-
+            function clearText(){
+                // Clear description
+                d3.select('#eventDescription')
+                    .transition()
+                    .duration(scrollSpeed)
+                    .text('');
+            };
 
             function eventView(thisEvent){
-                participants = []
+                // Position view for given event
+                participants = [];
                 for (var i = 0; i< thisEvent.childElementCount-2; i++) {
-                    participants[i] = thisEvent.childNodes[i].getAttribute('id')
+                    participants[i] = thisEvent.childNodes[i].getAttribute('id');
                 }
-
                 prevEvent = getPreviousValidSibling(thisEvent);
                 nextEvent = getNextValidSibling(thisEvent);
 
@@ -191,8 +182,6 @@
                 }
                 tmp = document.body.scrollLeft;
                 new_position =  tmp + xPadding - xpos;
-
-
 
                 d3.selectAll('g.event_group')
                     .transition()
@@ -218,7 +207,6 @@
                 document.getElementById('previousViewButton').style.visibility = 'visible';
                 document.getElementById('nextViewButton').style.visibility = 'visible';
 
-
                 d3.selectAll('text.scoreLabel')
                     .transition()
                     .duration(scrollSpeed)
@@ -228,26 +216,22 @@
                     .transition()
                     .duration(scrollSpeed)
                     .style('opacity', function(){return (this.id == thisEvent.id) ? 1.0 : 0.8;});
-
-
-
             };
+
             function fullView(speed){
-                //                document.getElementById('svgContainer').style.overflow = 'hidden';
+                // Return view to full view and given speed
                 d3.select('#dataSVG')
                     .attr({
-                    width: (eventSeriesWidth)*scaleValue,
-                    id: 'dataSVG'});
-
-
+                        width: (eventSeriesWidth)*scaleValue,
+                        id: 'dataSVG'
+                        });
 
                 d3.selectAll('g.event_group')
                     .transition()
                     .duration(speed)
-
                     .attr('transform', 'translate(0,0)')
                     .attr('transform', 'scale('+scaleValue+')')
-                    .style('opacity', defaultOpacity )    ;
+                    .style('opacity', defaultOpacity);
 
                 d3.selectAll('g.label_group')
                     .transition()
@@ -265,18 +249,13 @@
                     .style('opacity', 0);
 
                 clearText();
+
                 document.getElementById('fullViewId').style.visibility = 'hidden';
                 document.getElementById('nextViewButton').style.visibility = 'hidden';
                 document.getElementById('previousViewButton').style.visibility = 'hidden';
-
             };
 
-            function clearText(){
-                d3.select('#eventDescription')
-                    .transition()
-                    .duration(scrollSpeed)
-                    .text('');
-            };
+            // Alternate color
             function getColor(actionValue){
                 color = 'white';
                 if (actionValue == 1){
@@ -285,15 +264,13 @@
                 else if(actionValue == -1){
                     color = '#FF6666';
                 }
-
                 return(color);
             }
-
         </script>
 
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="nextViewButton" onclick = "eventView(nextEvent)">Next</button>
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="previousViewButton" onclick = "eventView(prevEvent)">Previous</button>
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="fullViewId" onclick = 'fullView(scrollSpeed)'>Return to game view</button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="nextViewButton" onclick = 'eventView(nextEvent);'>></button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="previousViewButton" onclick = 'eventView(prevEvent);'><</button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="fullViewId" onclick = 'fullView(scrollSpeed);'>Return to game view</button>
         <p id = 'eventDescription' class = "text-center"></p>
     </body>
 </html>
