@@ -3,11 +3,20 @@
     <head>
         <meta charset="UTF-8">
         <title>nba-staffchart</title>
-        <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <!-- <script src="https://d3js.org/d3.v5.min.js" charset="utf-8"></script> -->
+        <script type = 'text/javascript' src = 'resources/js/d3.v3.min.js'></script>
         <script src=" https://code.jquery.com/jquery-3.1.1.min.js" charset='utf-8'></script>
-        <script src="https://d3js.org/d3-queue.v3.min.js"></script>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-        <link rel="stylesheet" href="css/theme.css">
+        <script type = 'text/javascript' src = 'resources/js/d3-queue.min.js'></script>
+
+        <link rel='stylesheet' href='resources/css/bootstrap.min.css'>
+        <link rel="stylesheet" href="resources/css/theme.css">
+
+        <!-- 
+        <script type = 'text/javascript' src = 'resources/js/jquery-3.3.1.js'></script>
+
+    
+    -->
+
     </head>
     <body>
         <h1>Washington Wizards @ Indiana Pacers</h1>
@@ -23,8 +32,58 @@
                 momentum = [0,0],
                 defaultOpacity = 0.4;
 
+            var full_view_init = $(document).scrollLeft();
+
             // Load play-by-play and player data
             var nextEvent, prevEvent, dataset, player_keys;
+
+            function fullView(speed){
+                document.onscroll = function (e ) {
+                    full_view_init = $(document).scrollLeft();
+                }
+
+                document.onkeydown = function( e ) {}
+
+                $('html, body').css({
+                        overflow: 'auto',
+                            height: 'auto'
+                            });
+
+                // Return view to full view and given speed
+                d3.select('#dataSVG')
+                    .attr({
+                        width: (eventSeriesWidth)*scaleValue,
+                        id: 'dataSVG'
+                        });
+
+                d3.selectAll('g.event_group')
+                    .transition()
+                    .duration(speed)
+                    .attr('transform', 'translate(0,0)')
+                    .attr('transform', 'scale('+scaleValue+')')
+                    .style('opacity', defaultOpacity);
+
+                d3.selectAll('g.label_group')
+                    .transition()
+                    .duration(speed)
+                    .attr('transform', 'scale('+scaleValue+')');
+
+                d3.selectAll('text.playerLabel')
+                    .transition()
+                    .duration(scrollSpeed)
+                    .style('opacity', defaultOpacity);
+
+                d3.selectAll('text.scoreLabel')
+                    .transition()
+                    .duration(0)
+                    .style('opacity', 0);
+
+                clearText();
+
+                document.getElementById('fullViewId').style.visibility = 'hidden';
+                document.getElementById('nextViewButton').style.visibility = 'hidden';
+                document.getElementById('previousViewButton').style.visibility = 'hidden';
+            };
 
             d3.queue(2)
                 .defer(d3.json, 'data/pbp_parsed.json')
@@ -33,11 +92,15 @@
 
             // Initialize chart once data is ready
             function ready(error, results) {
+
+
                 dataset = results[0];
                 player_keys = results[1];
 
                 playerSeriesHeight = 100 + player_keys.length * (yPadding+ 1 * r) ;
                 eventSeriesWidth = xPadding + paneWidth * dataset.length * r * 1.5;
+
+                fullView(scrollSpeed);
 
                 // Initialize chart components
                 d3.select('body')
@@ -114,7 +177,8 @@
                     'class' : 'playerLabel',
                     'id' : function(d, i){return d['player_id'];},
                     'y' : function(d, i){ return 103 + d['player_id'] * (yPadding + 1 * r);},
-                    'x' : 10})
+                    'x' : 10, 
+                    'opacity' : defaultOpacity})
                     .text(function(d, i){return d['player_name'];});
                 fullView(0);
             };
@@ -142,7 +206,6 @@
             }
 
             function getPreviousValidSibling(event){
-                console.log(event);
                 if (event.previousSibling == null){
                     return (null);
                 }
@@ -166,6 +229,12 @@
             };
 
             function eventView(thisEvent){
+                // Freeze scrolling
+                $('html, body').css({
+                        overflowX: 'hidden',
+                        overflowY: 'auto',
+                            height: '100%'
+                        });
                 // Position view for given event
                 participants = [];
                 for (var i = 0; i< thisEvent.childElementCount-2; i++) {
@@ -180,13 +249,13 @@
                 else {
                     xpos = thisEvent.childNodes[0].getAttribute('cx');                
                 }
-                tmp = document.body.scrollLeft;
-                new_position =  tmp + xPadding - xpos;
+
+                new_position =  xPadding - xpos + full_view_init;
 
                 d3.selectAll('g.event_group')
                     .transition()
                     .duration(scrollSpeed)
-                    .attr('transform', 'scale(1)translate(' + new_position + ')')
+                    .attr('transform', 'translate(' + new_position + ')')
                     .style('opacity', function(){return (this.id == thisEvent.id) ? 1.0 : 0.2;});
 
                 d3.selectAll('g.label_group')
@@ -216,44 +285,19 @@
                     .transition()
                     .duration(scrollSpeed)
                     .style('opacity', function(){return (this.id == thisEvent.id) ? 1.0 : 0.8;});
-            };
 
-            function fullView(speed){
-                // Return view to full view and given speed
-                d3.select('#dataSVG')
-                    .attr({
-                        width: (eventSeriesWidth)*scaleValue,
-                        id: 'dataSVG'
-                        });
+document.onkeydown = function( e ) {
+    if ( e.keyCode == '40' | e.keyCode == '39') {
+        eventView(nextEvent);
+    } else if ( e.keyCode == '37' | e.keyCode == '38') {
+        eventView(prevEvent);
+    } else if ( e.keyCode == '27' | e.keyCode == '13') {
+        fullView(scrollSpeed);
+    }
+}
+};
 
-                d3.selectAll('g.event_group')
-                    .transition()
-                    .duration(speed)
-                    .attr('transform', 'translate(0,0)')
-                    .attr('transform', 'scale('+scaleValue+')')
-                    .style('opacity', defaultOpacity);
 
-                d3.selectAll('g.label_group')
-                    .transition()
-                    .duration(speed)
-                    .attr('transform', 'scale('+scaleValue+')');
-
-                d3.selectAll('text.playerLabel')
-                    .transition()
-                    .duration(scrollSpeed)
-                    .style('opacity', defaultOpacity);
-
-                d3.selectAll('text.scoreLabel')
-                    .transition()
-                    .duration(0)
-                    .style('opacity', 0);
-
-                clearText();
-
-                document.getElementById('fullViewId').style.visibility = 'hidden';
-                document.getElementById('nextViewButton').style.visibility = 'hidden';
-                document.getElementById('previousViewButton').style.visibility = 'hidden';
-            };
 
             // Alternate color
             function getColor(actionValue){
@@ -268,9 +312,9 @@
             }
         </script>
 
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="nextViewButton" onclick = 'eventView(nextEvent);'>></button>
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="previousViewButton" onclick = 'eventView(prevEvent);'><</button>
-        <button type="button" class="btn btn-primary btn-lg btn-block" id="fullViewId" onclick = 'fullView(scrollSpeed);'>Return to game view</button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="nextViewButton" onclick = 'eventView(nextEvent);' style="visibility:hidden">Next</button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="previousViewButton" onclick = 'eventView(prevEvent);' style="visibility:hidden">Previous</button>
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="fullViewId" onclick = 'fullView(scrollSpeed);' style="visibility:hidden">Full view</button>
         <p id = 'eventDescription' class = "text-center"></p>
     </body>
 </html>
